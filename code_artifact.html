@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketPulse - リアルタイム株価・市場ダッシュボード</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '"Noto Sans JP"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            900: '#1e3a8a',
+                        },
+                        stock: {
+                            up: '#10b981',    // 上昇（グリーン）
+                            down: '#f43f5e',  // 下落（ローズ）
+                        },
+                        dark: {
+                            bg: '#0b0f17',
+                            card: '#151c28',
+                            border: '#222f43',
+                            hover: '#1e293b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0b0f17;
+            color: #f1f5f9;
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+        }
+        /* スクロールバーのカスタマイズ */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f17;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #222f43;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b82f6;
+        }
+        /* ネオン感のある輝き効果 */
+        .glow-box {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.08);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-dark-bg text-slate-100 antialiased selection:bg-blue-600 selection:text-white">
+
+    <!-- ナビゲーションヘッダー -->
+    <header class="border-b border-dark-border bg-dark-card/90 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- ロゴ -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                        <i class="fa-solid fa-chart-line text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-bold tracking-wider text-white">Market<span class="text-brand-500">Pulse</span></span>
+                        <span class="hidden sm:inline-block text-xs text-slate-400 ml-2 px-2 py-0.5 rounded bg-slate-800 border border-slate-700">LIVE</span>
+                    </div>
+                </div>
+
+                <!-- 検索バー（クイックシンボル変更） -->
+                <div class="flex-1 max-w-md mx-4 hidden md:block">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="symbolSearchInput" placeholder="銘柄コード・ティッカーを入力 (例: 7203, AAPL, USDJPY)..." 
+                               class="w-full pl-10 pr-20 py-2 rounded-xl bg-dark-bg border border-dark-border text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 transition duration-200">
+                        <button onclick="handleSearch()" class="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1 bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium rounded-lg transition duration-200">
+                            検索
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 時計＆ステータス -->
+                <div class="flex items-center space-x-4">
+                    <div class="text-right hidden sm:block">
+                        <div id="liveClock" class="text-sm font-mono font-medium text-slate-200">--:--:--</div>
+                        <div class="text-[10px] text-slate-400">JST (東京市場)</div>
+                    </div>
+                    <div class="h-8 w-[1px] bg-dark-border hidden sm:block"></div>
+                    <a href="#quick-watchlist" class="px-3.5 py-2 bg-dark-hover hover:bg-slate-800 text-slate-200 border border-dark-border rounded-xl text-xs font-medium transition duration-200 flex items-center space-x-2">
+                        <i class="fa-solid fa-star text-amber-400"></i>
+                        <span>銘柄一覧</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- リアルタイム・ティッカーテープ（TradingView ウィジェット） -->
+    <section class="border-b border-dark-border bg-slate-950/60 overflow-hidden">
+        <div class="tradingview-widget-container">
+            <div class="tradingview-widget-container__widget"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+            {
+                "symbols": [
+                    { "proName": "INDEX:NKY", "title": "日経平均" },
+                    { "proName": "FOREXCOM:SPXUSD", "title": "S&P 500" },
+                    { "proName": "FOREXCOM:NSXUSD", "title": "NASDAQ 100" },
+                    { "proName": "FX_IDC:USDJPY", "title": "米ドル/円" },
+                    { "proName": "FX_IDC:EURJPY", "title": "ユーロ/円" },
+                    { "proName": "BITSTAMP:BTCUSD", "title": "ビットコイン" },
+                    { "proName": "BITSTAMP:ETHUSD", "title": "イーサリアム" }
+                ],
+                "showSymbolLogo": true,
+                "colorTheme": "dark",
+                "isTransparent": true,
+                "displayMode": "adaptive",
+                "locale": "ja"
+            }
+            </script>
+        </div>
+    </section>
+
+    <!-- メインコンテンツ -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- 注目銘柄クイック選択（日本株 & 米国株） -->
+        <section id="quick-watchlist" class="space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <h2 class="text-lg font-bold text-slate-100 flex items-center space-x-2">
+                    <i class="fa-solid fa-fire text-orange-500"></i>
+                    <span>注目・主要銘柄（クリックでチャート表示）</span>
+                </h2>
+                <!-- カテゴリタブ -->
+                <div class="flex space-x-1 bg-dark-card p-1 rounded-xl border border-dark-border text-xs">
+                    <button onclick="filterWatchlist('all')" id="tab-all" class="watchlist-tab px-3 py-1.5 rounded-lg font-medium text-white bg-brand-600 transition">すべて</button>
+                    <button onclick="filterWatchlist('jp')" id="tab-jp" class="watchlist-tab px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition">日本株</button>
+                    <button onclick="filterWatchlist('us')" id="tab-us" class="watchlist-tab px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition">米国株</button>
+                    <button onclick="filterWatchlist('fx')" id="tab-fx" class="watchlist-tab px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition">為替/暗号資産</button>
+                </div>
+            </div>
+
+            <!-- 銘柄カードグリッド -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3" id="stockCardGrid">
+                <!-- JavaScriptで動的生成またはHTMLプリセット -->
+            </div>
+        </section>
+
+        <!-- メイン・ダッシュボードエリア (チャート & サイドパネル) -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            
+            <!-- メインチャート（2カラム分） -->
+            <div class="lg:col-span-2 bg-dark-card border border-dark-border rounded-2xl p-4 glow-box flex flex-col space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-dark-border pb-3">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h3 id="currentSymbolTitle" class="text-xl font-bold text-white">トヨタ自動車</h3>
+                            <span id="currentSymbolCode" class="text-xs px-2 py-0.5 rounded bg-blue-900/50 border border-blue-700/50 text-blue-300 font-mono">TSE:7203</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">TradingView アドバンスド・リアルタイムチャート</p>
+                    </div>
+                    
+                    <!-- プリセット切り替えボタン -->
+                    <div class="flex items-center space-x-1.5">
+                        <button onclick="switchChartSymbol('TSE:7203', 'トヨタ自動車')" class="px-2.5 py-1 text-xs rounded-lg bg-dark-hover hover:bg-slate-700 text-slate-300 border border-dark-border">トヨタ</button>
+                        <button onclick="switchChartSymbol('TSE:6758', 'ソニーグループ')" class="px-2.5 py-1 text-xs rounded-lg bg-dark-hover hover:bg-slate-700 text-slate-300 border border-dark-border">ソニー</button>
+                        <button onclick="switchChartSymbol('NASDAQ:NVDA', 'NVIDIA')" class="px-2.5 py-1 text-xs rounded-lg bg-dark-hover hover:bg-slate-700 text-slate-300 border border-dark-border">NVIDIA</button>
+                        <button onclick="switchChartSymbol('FX_IDC:USDJPY', '米ドル / 円')" class="px-2.5 py-1 text-xs rounded-lg bg-dark-hover hover:bg-slate-700 text-slate-300 border border-dark-border">USD/JPY</button>
+                    </div>
+                </div>
+
+                <!-- チャートコンテナ (TradingView Widget) -->
+                <div class="w-full h-[500px] sm:h-[550px] rounded-xl overflow-hidden bg-slate-950 border border-dark-border" id="chartContainer">
+                    <!-- JavaScriptでチャートを注入 -->
+                </div>
+            </div>
+
+            <!-- サイド情報パネル（テクニカル分析 & 市況ニュース） -->
+            <div class="space-y-6">
+                
+                <!-- テクニカル分析メーター -->
+                <div class="bg-dark-card border border-dark-border rounded-2xl p-4">
+                    <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center space-x-2">
+                        <i class="fa-solid fa-gauge-high text-brand-500"></i>
+                        <span>テクニカル分析シグナル</span>
+                    </h3>
+                    <div class="w-full h-[280px]" id="technicalGaugeContainer">
+                        <!-- TradingView Technical Analysis Widget -->
+                    </div>
+                </div>
+
+                <!-- 経済ニュース・タイムライン -->
+                <div class="bg-dark-card border border-dark-border rounded-2xl p-4">
+                    <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center space-x-2">
+                        <i class="fa-regular fa-newspaper text-emerald-400"></i>
+                        <span>最新の市場ニュース</span>
+                    </h3>
+                    <div class="w-full h-[380px] rounded-xl overflow-hidden border border-dark-border" id="newsTimelineContainer">
+                        <!-- TradingView Timeline News Widget -->
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- グローバル市場ヒートマップ & 一覧セクション -->
+        <section class="bg-dark-card border border-dark-border rounded-2xl p-5 space-y-4">
+            <div class="flex items-center justify-between border-b border-dark-border pb-3">
+                <h3 class="text-lg font-bold text-slate-100 flex items-center space-x-2">
+                    <i class="fa-solid fa-earth-americas text-blue-400"></i>
+                    <span>世界主要市場の動向概要</span>
+                </h3>
+                <span class="text-xs text-slate-400">TradingView Market Overview</span>
+            </div>
+            
+            <div class="w-full h-[450px] rounded-xl overflow-hidden border border-dark-border">
+                <div class="tradingview-widget-container" style="height:100%;width:100%">
+                    <div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
+                    {
+                        "colorTheme": "dark",
+                        "dateRange": "12M",
+                        "showChart": true,
+                        "locale": "ja",
+                        "largeChartUrl": "",
+                        "isTransparent": true,
+                        "showSymbolLogo": true,
+                        "showFloatingTooltip": false,
+                        "width": "100%",
+                        "height": "100%",
+                        "plotLineColorGrowing": "rgba(16, 185, 129, 1)",
+                        "plotLineColorFalling": "rgba(244, 63, 94, 1)",
+                        "gridLineColor": "rgba(240, 243, 246, 0.06)",
+                        "scaleFontColor": "rgba(120, 123, 134, 1)",
+                        "belowLineFillColorGrowing": "rgba(16, 185, 129, 0.12)",
+                        "belowLineFillColorFalling": "rgba(244, 63, 94, 0.12)",
+                        "belowLineFillColorGrowingBottom": "rgba(16, 185, 129, 0)",
+                        "belowLineFillColorFallingBottom": "rgba(244, 63, 94, 0)",
+                        "symbolActiveColor": "rgba(41, 98, 255, 0.12)",
+                        "tabs": [
+                            {
+                                "title": "日本株・主要銘柄",
+                                "symbols": [
+                                    { "s": "TSE:7203", "d": "トヨタ自動車" },
+                                    { "s": "TSE:6758", "d": "ソニーグループ" },
+                                    { "s": "TSE:9984", "d": "ソフトバンクグループ" },
+                                    { "s": "TSE:6861", "d": "キーエンス" },
+                                    { "s": "TSE:9983", "d": "ファーストリテイリング" },
+                                    { "s": "TSE:8306", "d": "三菱UFJ" }
+                                ]
+                            },
+                            {
+                                "title": "米国大型株",
+                                "symbols": [
+                                    { "s": "NASDAQ:AAPL", "d": "Apple" },
+                                    { "s": "NASDAQ:NVDA", "d": "NVIDIA" },
+                                    { "s": "NASDAQ:MSFT", "d": "Microsoft" },
+                                    { "s": "NASDAQ:AMZN", "d": "Amazon" },
+                                    { "s": "NASDAQ:TSLA", "d": "Tesla" }
+                                ]
+                            },
+                            {
+                                "title": "為替・暗号資産",
+                                "symbols": [
+                                    { "s": "FX_IDC:USDJPY", "d": "米ドル/円" },
+                                    { "s": "FX_IDC:EURUSD", "d": "ユーロ/米ドル" },
+                                    { "s": "BITSTAMP:BTCUSD", "d": "Bitcoin" },
+                                    { "s": "BITSTAMP:ETHUSD", "d": "Ethereum" }
+                                ]
+                            }
+                        ]
+                    }
+                    </script>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- フッター -->
+    <footer class="border-t border-dark-border bg-slate-950 py-8 text-slate-400 text-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-6 h-6 rounded-lg bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                    M
+                </div>
+                <span class="font-bold text-slate-200">MarketPulse Dashboard</span>
+                <span>&copy; 2026 MarketPulse Inc.</span>
+            </div>
+            <p class="text-center md:text-right text-slate-500 max-w-xl">
+                ※当ウェブサイトに掲載されている株価情報・各種チャートはデータ提供元のTradingView等に基づいています。投資判断の最終決定はご自身の責任で行ってください。
+            </p>
+        </div>
+    </footer>
+
+    <!-- JavaScript ロジック -->
+    <script src="https://s3.tradingview.com/tv.js"></script>
+    <script>
+        // 銘柄マスターデータ
+        const stockList = [
+            // 日本株
+            { symbol: 'TSE:7203', name: 'トヨタ自動車', code: '7203', category: 'jp', icon: 'fa-car' },
+            { symbol: 'TSE:6758', name: 'ソニーG', code: '6758', category: 'jp', icon: 'fa-tv' },
+            { symbol: 'TSE:9984', name: 'ソフトバンクG', code: '9984', category: 'jp', icon: 'fa-signal' },
+            { symbol: 'TSE:6861', name: 'キーエンス', code: '6861', category: 'jp', icon: 'fa-microchip' },
+            { symbol: 'TSE:9983', name: 'ファーストリトリ', code: '9983', category: 'jp', icon: 'fa-shirt' },
+            { symbol: 'TSE:8306', name: '三菱UFJ', code: '8306', category: 'jp', icon: 'fa-building-columns' },
+            
+            // 米国株
+            { symbol: 'NASDAQ:NVDA', name: 'NVIDIA', code: 'NVDA', category: 'us', icon: 'fa-memory' },
+            { symbol: 'NASDAQ:AAPL', name: 'Apple', code: 'AAPL', category: 'us', icon: 'fa-apple', iconPrefix: 'fab' },
+            { symbol: 'NASDAQ:MSFT', name: 'Microsoft', code: 'MSFT', category: 'us', icon: 'fa-microsoft', iconPrefix: 'fab' },
+            { symbol: 'NASDAQ:AMZN', name: 'Amazon', code: 'AMZN', category: 'us', icon: 'fa-amazon', iconPrefix: 'fab' },
+            { symbol: 'NASDAQ:TSLA', name: 'Tesla', code: 'TSLA', category: 'us', icon: 'fa-bolt' },
+            { symbol: 'NASDAQ:GOOGL', name: 'Alphabet (Google)', code: 'GOOGL', category: 'us', icon: 'fa-google', iconPrefix: 'fab' },
+
+            // 為替 & 暗号資産
+            { symbol: 'FX_IDC:USDJPY', name: '米ドル / 円', code: 'USD/JPY', category: 'fx', icon: 'fa-dollar-sign' },
+            { symbol: 'BITSTAMP:BTCUSD', name: 'ビットコイン', code: 'BTC/USD', category: 'fx', icon: 'fa-bitcoin', iconPrefix: 'fab' }
+        ];
+
+        let currentActiveSymbol = 'TSE:7203';
+
+        // ページ読み込み完了時の処理
+        window.addEventListener('DOMContentLoaded', () => {
+            startClock();
+            renderWatchlistGrid('all');
+            initAdvancedChart('TSE:7203', 'トヨタ自動車');
+            initTechnicalGauge('TSE:7203');
+            initNewsTimeline();
+        });
+
+        // リアルタイム時計
+        function startClock() {
+            const clockEl = document.getElementById('liveClock');
+            function update() {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                if (clockEl) {
+                    clockEl.textContent = `${hours}:${minutes}:${seconds}`;
+                }
+            }
+            update();
+            setInterval(update, 1000);
+        }
+
+        // 銘柄カードグリッドのレンダリング
+        function renderWatchlistGrid(category = 'all') {
+            const gridContainer = document.getElementById('stockCardGrid');
+            if (!gridContainer) return;
+
+            const filtered = category === 'all' 
+                ? stockList 
+                : stockList.filter(item => item.category === category);
+
+            gridContainer.innerHTML = filtered.map(item => {
+                const prefix = item.iconPrefix || 'fas';
+                const isActive = item.symbol === currentActiveSymbol;
+                return `
+                    <div onclick="switchChartSymbol('${item.symbol}', '${item.name}')" 
+                         class="cursor-pointer bg-dark-card hover:bg-dark-hover border ${isActive ? 'border-brand-500 shadow-md shadow-blue-500/10' : 'border-dark-border'} p-3 rounded-xl transition duration-200 group flex flex-col justify-between space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-brand-500 group-hover:bg-brand-600 group-hover:text-white transition">
+                                <i class="${prefix} ${item.icon} text-sm"></i>
+                            </div>
+                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">${item.code}</span>
+                        </div>
+                        <div>
+                            <div class="font-bold text-sm text-slate-200 group-hover:text-brand-500 transition truncate">${item.name}</div>
+                            <div class="text-[11px] text-slate-400 font-mono flex items-center justify-between mt-1">
+                                <span>表示</span>
+                                <i class="fa-solid fa-chevron-right text-[9px] text-slate-500 group-hover:translate-x-0.5 transition"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // フィルタータブ切り替え
+        function filterWatchlist(category) {
+            document.querySelectorAll('.watchlist-tab').forEach(tab => {
+                tab.classList.remove('bg-brand-600', 'text-white');
+                tab.classList.add('text-slate-400');
+            });
+            const activeBtn = document.getElementById(`tab-${category}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-400');
+                activeBtn.classList.add('bg-brand-600', 'text-white');
+            }
+            renderWatchlistGrid(category);
+        }
+
+        // メインチャートの表示切り替え
+        function switchChartSymbol(symbol, name) {
+            currentActiveSymbol = symbol;
+            
+            // ヘッダーテキスト更新
+            document.getElementById('currentSymbolTitle').textContent = name;
+            document.getElementById('currentSymbolCode').textContent = symbol;
+
+            // チャート再描写
+            initAdvancedChart(symbol, name);
+
+            // テクニカル分析再描写
+            initTechnicalGauge(symbol);
+
+            // 銘柄カードハイライト更新
+            renderWatchlistGrid();
+
+            // スムーズスクロール（スマホ向け）
+            if (window.innerWidth < 1024) {
+                document.getElementById('chartContainer')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        // TradingView Advanced Chart ウィジェット読み込み
+        function initAdvancedChart(symbol) {
+            const container = document.getElementById('chartContainer');
+            if (!container) return;
+
+            container.innerHTML = '<div id="tv_chart_inner" class="w-full h-full"></div>';
+
+            new TradingView.widget({
+                "autosize": true,
+                "symbol": symbol,
+                "interval": "D",
+                "timezone": "Asia/Tokyo",
+                "theme": "dark",
+                "style": "1", // ローソク足
+                "locale": "ja",
+                "toolbar_bg": "#0b0f17",
+                "enable_publishing": false,
+                "allow_symbol_change": true,
+                "container_id": "tv_chart_inner",
+                "hide_side_toolbar": false,
+                "studies": [
+                    "RSI@tv-basicstudies",
+                    "MASimple@tv-basicstudies"
+                ]
+            });
+        }
+
+        // テクニカル分析ゲージウィジェット
+        function initTechnicalGauge(symbol) {
+            const container = document.getElementById('technicalGaugeContainer');
+            if (!container) return;
+
+            container.innerHTML = '';
+            
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
+            script.async = true;
+            script.innerHTML = JSON.stringify({
+                "interval": "1D",
+                "width": "100%",
+                "isTransparent": true,
+                "height": "100%",
+                "symbol": symbol,
+                "showIntervalTabs": true,
+                "displayMode": "single",
+                "locale": "ja",
+                "colorTheme": "dark"
+            });
+            container.appendChild(script);
+        }
+
+        // 市場ニュース・タイムラインウィジェット
+        function initNewsTimeline() {
+            const container = document.getElementById('newsTimelineContainer');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-timeline.js';
+            script.async = true;
+            script.innerHTML = JSON.stringify({
+                "feedMode": "all_symbols",
+                "isTransparent": true,
+                "displayMode": "regular",
+                "width": "100%",
+                "height": "100%",
+                "colorTheme": "dark",
+                "locale": "ja"
+            });
+            container.appendChild(script);
+        }
+
+        // 検索機能のハンドリング
+        function handleSearch() {
+            const input = document.getElementById('symbolSearchInput');
+            if (!input || !input.value.trim()) return;
+
+            let query = input.value.trim().toUpperCase();
+
+            // 日本株の4桁コード入力に対応 (例: 7203 -> TSE:7203)
+            if (/^\d{4}$/.test(query)) {
+                query = `TSE:${query}`;
+            }
+
+            switchChartSymbol(query, `銘柄: ${query}`);
+            input.value = '';
+        }
+
+        // エンターキーで検索実行
+        document.getElementById('symbolSearchInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        });
+    </script>
+</body>
+</html>
