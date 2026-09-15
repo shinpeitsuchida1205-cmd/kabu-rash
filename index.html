@@ -3,132 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J-Stock Pulse | 日本株マーケットダッシュボード</title>
-    
-    <!-- Tailwind CSS CDN -->
+    <title>全上場株マーケットダッシュボード | Stock Market Hub</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        darkbg: '#080c14',
-                        cardbg: '#0f172a',
-                        cardhover: '#1e293b',
-                        accentemerald: '#10b981',
-                        accentcyan: '#06b6d4',
+                        brand: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            900: '#1e3a8a',
+                        },
+                        darkbg: '#0f172a',
+                        darkcard: '#1e293b',
                     }
                 }
             }
         }
     </script>
-    
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- TradingView Advanced Chart Library -->
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-
     <style>
-        body {
-            font-family: 'Inter', 'Noto Sans JP', sans-serif;
-            background-color: #080c14;
-            color: #f1f5f9;
+        .tradingview-widget-container {
+            width: 100%;
+            height: 100%;
         }
-        /* Custom Scrollbar */
+        /* Custom scrollbar */
         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #0b0f19;
+            background: #0f172a;
         }
         ::-webkit-scrollbar-thumb {
-            background: #1e293b;
-            border-radius: 3px;
+            background: #334155;
+            border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #334155;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .stock-card {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .stock-card:hover {
-            transform: translateY(-2px);
+            background: #475569;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-slate-950">
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col">
 
-    <header class="bg-slate-900/95 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-50 px-4 lg:px-8 py-3">
-        <div class="max-w-[1920px] mx-auto flex flex-wrap items-center justify-between gap-4">
-            
-            <!-- ロゴ & サイト名 -->
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-cyan-500/20 text-slate-950 font-black text-xl">
-                    <i class="fa-solid fa-chart-simple"></i>
+    <!-- ナビゲーションバー -->
+    <header class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- ロゴ & タイトル -->
+                <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-blue-600/20 text-blue-500 rounded-lg border border-blue-500/30">
+                        <i data-lucide="trending-up" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                            J-Stock Hub
+                        </span>
+                        <span class="ml-2 text-xs px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded border border-blue-500/20">日本株＆世界市場</span>
+                    </div>
                 </div>
-                <div>
-                    <!-- サイトタイトル（書き換え可能） -->
-                    <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                        J-Stock Pulse <span class="text-xs font-normal px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">日本株分析</span>
-                    </h1>
-                    <p class="text-xs text-slate-400">日本株注目20銘柄 ＆ リアルタイム市場ダッシュボード</p>
-                </div>
-            </div>
 
-            <!-- 検索バー -->
-            <div class="flex-grow max-w-md mx-auto sm:mx-0">
-                <form onsubmit="handleSearch(event)" class="relative flex items-center">
-                    <input type="text" id="symbol-search-input" placeholder="銘柄コード(例: 7203, 8035) や 銘柄名(例: AAPL)..." 
-                        class="w-full bg-slate-950/80 border border-slate-700/80 focus:border-cyan-500 rounded-xl px-4 py-2 pl-10 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 text-slate-500 text-xs"></i>
-                    <button type="submit" class="absolute right-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs px-3 py-1 rounded-lg transition-all">
-                        表示
-                    </button>
-                </form>
-            </div>
+                <!-- 右側ナビゲーションリンク -->
+                <nav class="hidden md:flex space-x-6 text-sm font-medium">
+                    <a href="#screener-section" class="text-slate-300 hover:text-blue-400 transition">全株ソート・検索</a>
+                    <a href="#heatmap-section" class="text-slate-300 hover:text-blue-400 transition">企業価値ヒートマップ</a>
+                    <a href="#chart-section" class="text-slate-300 hover:text-blue-400 transition">詳細チャート</a>
+                    <a href="#news-section" class="text-slate-300 hover:text-blue-400 transition">最新ニュース</a>
+                </nav>
 
-            <!-- ステータス ＆ 時計 -->
-            <div class="hidden lg:flex items-center gap-4 text-xs">
-                <div class="flex items-center gap-2 bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/50">
-                    <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                    <span class="text-emerald-400 font-medium text-[11px]">LIVE DATA</span>
-                </div>
-                <div id="live-clock" class="text-slate-300 font-mono bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 shadow-inner">
-                    --:--:-- (JST)
+                <!-- 更新日時表示 -->
+                <div class="flex items-center space-x-2 text-xs text-slate-400 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>リアルタイム更新中</span>
                 </div>
             </div>
-
         </div>
     </header>
 
-    <!-- 上部ティッカーバー (日経平均・TOPIX・S&P500・ドル円等) -->
-    <div class="border-b border-slate-800/80 bg-slate-950/80">
+    <!-- ティッカーテープ（リアルタイム株価流れるバー） -->
+    <div class="w-full bg-slate-900 border-b border-slate-800 h-11 overflow-hidden">
         <div class="tradingview-widget-container">
             <div class="tradingview-widget-container__widget"></div>
             <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
             {
                 "symbols": [
-                    { "proName": "INDEX:NKY", "title": "日経平均 (日経225)" },
-                    { "proName": "TSE:TOPX", "title": "TOPIX" },
-                    { "proName": "FOREXCOM:SPXUSD", "title": "S&P 500" },
-                    { "proName": "FOREXCOM:NSXUSD", "title": "NASDAQ 100" },
-                    { "proName": "FX_IDC:USDJPY", "title": "米ドル / 円" },
-                    { "proName": "TVC:GOLD", "title": "金 (Gold)" },
-                    { "proName": "BITSTAMP:BTCUSD", "title": "ビットコイン" }
+                    { "proName": "INDEX:NKY", "title": "日経平均" },
+                    { "proName": "TOKYO:1306", "title": "TOPIX ETF" },
+                    { "proName": "FOREX:USDJPY", "title": "米ドル/円" },
+                    { "proName": "FOREX:EURJPY", "title": "ユーロ/円" },
+                    { "proName": "FOREX:GBPJPY", "title": "ポンド/円" },
+                    { "proName": "FOREX:AUDJPY", "title": "豪ドル/円" },
+                    { "proName": "FOREX:EURUSD", "title": "ユーロ/米ドル" },
+                    { "proName": "BITSTAMP:BTCUSD", "title": "ビットコイン" },
+                    { "proName": "BITSTAMP:ETHUSD", "title": "イーサリアム" },
+                    { "proName": "FOREX:XAUUSD", "title": "金 (GOLD)" }
                 ],
                 "showSymbolLogo": true,
                 "isTransparent": true,
@@ -140,325 +113,146 @@
         </div>
     </div>
 
-    <main class="flex-grow max-w-[1920px] w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+    <!-- メインコンテンツ -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
 
-        <!-- クイック指数選択 ＆ 注目20銘柄グリッド -->
-        <section class="bg-slate-900/80 rounded-2xl border border-slate-800/80 p-4 sm:p-6 shadow-2xl backdrop-blur-sm space-y-4">
-            
-            <!-- セクションヘッダー ＆ カテゴリフィルター -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-slate-800">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-star text-amber-400 text-sm"></i>
-                    <h2 class="text-base font-bold text-white tracking-wide">日本株 注目20銘柄 ＆ 主要指数 (クリックで切り替え)</h2>
-                </div>
-                
-                <!-- タブフィルター -->
-                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 hide-scrollbar text-xs">
-                    <button onclick="filterStocks('all')" class="cat-btn active bg-cyan-600 text-white px-3 py-1.5 rounded-lg border border-cyan-500 transition-all font-medium whitespace-nowrap">
-                        すべて (20)
-                    </button>
-                    <button onclick="filterStocks('tech')" class="cat-btn bg-slate-800 text-slate-300 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition-all whitespace-nowrap">
-                        半導体・ハイテク
-                    </button>
-                    <button onclick="filterStocks('auto')" class="cat-btn bg-slate-800 text-slate-300 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition-all whitespace-nowrap">
-                        自動車
-                    </button>
-                    <button onclick="filterStocks('finance')" class="cat-btn bg-slate-800 text-slate-300 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition-all whitespace-nowrap">
-                        金融・メガバンク・商社
-                    </button>
-                    <button onclick="filterStocks('it')" class="cat-btn bg-slate-800 text-slate-300 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition-all whitespace-nowrap">
-                        IT・通信・ゲーム
-                    </button>
-                    <button onclick="filterStocks('industry')" class="cat-btn bg-slate-800 text-slate-300 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition-all whitespace-nowrap">
-                        機械・化学・医薬
-                    </button>
+        <!-- 1. 全上場株 スクリナー & ソート機能 -->
+        <section id="screener-section" class="space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold flex items-center gap-2 text-slate-100">
+                        <i data-lucide="bar-chart-3" class="text-blue-500"></i>
+                        全上場企業スクリーナー＆ソート（日本株・全社）
+                    </h2>
+                    <p class="text-sm text-slate-400 mt-1">
+                        時価総額（企業価値）、本日の変動率（値上がり・値下がり率）、出来高などで自由並べ替え（ソート）が可能です。
+                    </p>
                 </div>
             </div>
 
-            <!-- 主要指数クイックボタン -->
-            <div class="flex flex-wrap items-center gap-2 pb-2">
-                <span class="text-xs text-slate-400 font-semibold mr-1">【主要指数】</span>
-                <button onclick="switchSymbol('INDEX:NKY', '日経平均')" class="idx-btn px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-cyan-900/50 text-cyan-400 border border-cyan-500/30 text-xs font-semibold transition-all">
-                    📈 日経平均
-                </button>
-                <button onclick="switchSymbol('TSE:TOPX', 'TOPIX')" class="idx-btn px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-cyan-900/50 text-cyan-400 border border-cyan-500/30 text-xs font-semibold transition-all">
-                    📊 TOPIX
-                </button>
-                <button onclick="switchSymbol('FOREXCOM:SPXUSD', 'S&P 500')" class="idx-btn px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-cyan-900/50 text-slate-300 border border-slate-700 text-xs font-semibold transition-all">
-                    🇺🇸 S&P 500
-                </button>
-                <button onclick="switchSymbol('FX_IDC:USDJPY', '米ドル/円')" class="idx-btn px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-cyan-900/50 text-amber-400 border border-amber-500/30 text-xs font-semibold transition-all">
-                    💴 米ドル/円
-                </button>
-            </div>
-
-            <!-- 注目20銘柄カードグリッド -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3" id="stocks-grid">
-                
-                <!-- 1. トヨタ自動車 -->
-                <div data-category="auto" onclick="switchSymbol('TSE:7203', 'トヨタ自動車')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">7203</span>
-                        <span class="text-[10px] text-slate-500">自動車</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">トヨタ自動車</div>
-                    <div class="text-[11px] text-slate-400">TSE:7203</div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl" style="height: 600px;">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-screener.js" async>
+                    {
+                        "width": "100%",
+                        "height": "100%",
+                        "defaultColumn": "overview",
+                        "defaultScreen": "general",
+                        "market": "japan",
+                        "showToolbar": true,
+                        "colorTheme": "dark",
+                        "locale": "ja",
+                        "isTransparent": true
+                    }
+                    </script>
                 </div>
-
-                <!-- 2. ホンダ -->
-                <div data-category="auto" onclick="switchSymbol('TSE:7267', 'ホンダ')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">7267</span>
-                        <span class="text-[10px] text-slate-500">自動車</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">ホンダ</div>
-                    <div class="text-[11px] text-slate-400">TSE:7267</div>
-                </div>
-
-                <!-- 3. 東京エレクトロン -->
-                <div data-category="tech" onclick="switchSymbol('TSE:8035', '東京エレクトロン')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">8035</span>
-                        <span class="text-[10px] text-slate-500">半導体</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">東京エレクトロン</div>
-                    <div class="text-[11px] text-slate-400">TSE:8035</div>
-                </div>
-
-                <!-- 4. レーザーテック -->
-                <div data-category="tech" onclick="switchSymbol('TSE:6920', 'レーザーテック')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">6920</span>
-                        <span class="text-[10px] text-slate-500">半導体</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">レーザーテック</div>
-                    <div class="text-[11px] text-slate-400">TSE:6920</div>
-                </div>
-
-                <!-- 5. アドバンテスト -->
-                <div data-category="tech" onclick="switchSymbol('TSE:6857', 'アドバンテスト')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">6857</span>
-                        <span class="text-[10px] text-slate-500">半導体</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">アドバンテスト</div>
-                    <div class="text-[11px] text-slate-400">TSE:6857</div>
-                </div>
-
-                <!-- 6. キーエンス -->
-                <div data-category="tech" onclick="switchSymbol('TSE:6861', 'キーエンス')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">6861</span>
-                        <span class="text-[10px] text-slate-500">ハイテク</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">キーエンス</div>
-                    <div class="text-[11px] text-slate-400">TSE:6861</div>
-                </div>
-
-                <!-- 7. ソニーグループ -->
-                <div data-category="it" onclick="switchSymbol('TSE:6758', 'ソニーグループ')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">6758</span>
-                        <span class="text-[10px] text-slate-500">IT・ゲーム</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">ソニーグループ</div>
-                    <div class="text-[11px] text-slate-400">TSE:6758</div>
-                </div>
-
-                <!-- 8. ソフトバンクグループ -->
-                <div data-category="it" onclick="switchSymbol('TSE:9984', 'ソフトバンクG')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">9984</span>
-                        <span class="text-[10px] text-slate-500">投資・通信</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">ソフトバンクG</div>
-                    <div class="text-[11px] text-slate-400">TSE:9984</div>
-                </div>
-
-                <!-- 9. 任天堂 -->
-                <div data-category="it" onclick="switchSymbol('TSE:7974', '任天堂')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">7974</span>
-                        <span class="text-[10px] text-slate-500">ゲーム</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">任天堂</div>
-                    <div class="text-[11px] text-slate-400">TSE:7974</div>
-                </div>
-
-                <!-- 10. NTT -->
-                <div data-category="it" onclick="switchSymbol('TSE:9432', 'NTT')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">9432</span>
-                        <span class="text-[10px] text-slate-500">通信</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">NTT</div>
-                    <div class="text-[11px] text-slate-400">TSE:9432</div>
-                </div>
-
-                <!-- 11. 三菱UFJ -->
-                <div data-category="finance" onclick="switchSymbol('TSE:8306', '三菱UFJ')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">8306</span>
-                        <span class="text-[10px] text-slate-500">銀行</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">三菱UFJ</div>
-                    <div class="text-[11px] text-slate-400">TSE:8306</div>
-                </div>
-
-                <!-- 12. 三井住友FG -->
-                <div data-category="finance" onclick="switchSymbol('TSE:8316', '三井住友FG')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">8316</span>
-                        <span class="text-[10px] text-slate-500">銀行</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">三井住友FG</div>
-                    <div class="text-[11px] text-slate-400">TSE:8316</div>
-                </div>
-
-                <!-- 13. オリックス -->
-                <div data-category="finance" onclick="switchSymbol('TSE:8591', 'オリックス')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">8591</span>
-                        <span class="text-[10px] text-slate-500">金融</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">オリックス</div>
-                    <div class="text-[11px] text-slate-400">TSE:8591</div>
-                </div>
-
-                <!-- 14. 三井物産 -->
-                <div data-category="finance" onclick="switchSymbol('TSE:8031', '三井物産')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">8031</span>
-                        <span class="text-[10px] text-slate-500">商社</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">三井物産</div>
-                    <div class="text-[11px] text-slate-400">TSE:8031</div>
-                </div>
-
-                <!-- 15. 伊藤忠商事 -->
-                <div data-category="finance" onclick="switchSymbol('TSE:8001', '伊藤忠')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">8001</span>
-                        <span class="text-[10px] text-slate-500">商社</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">伊藤忠</div>
-                    <div class="text-[11px] text-slate-400">TSE:8001</div>
-                </div>
-
-                <!-- 16. ファーストリテイリング -->
-                <div data-category="industry" onclick="switchSymbol('TSE:9983', 'ファーストリテイ')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">9983</span>
-                        <span class="text-[10px] text-slate-500">小売</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">ファーストリテイ</div>
-                    <div class="text-[11px] text-slate-400">TSE:9983</div>
-                </div>
-
-                <!-- 17. 日立製作所 -->
-                <div data-category="industry" onclick="switchSymbol('TSE:6501', '日立製作所')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">6501</span>
-                        <span class="text-[10px] text-slate-500">電気機器</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">日立製作所</div>
-                    <div class="text-[11px] text-slate-400">TSE:6501</div>
-                </div>
-
-                <!-- 18. 信越化学工業 -->
-                <div data-category="industry" onclick="switchSymbol('TSE:4063', '信越化学')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">4063</span>
-                        <span class="text-[10px] text-slate-500">化学</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">信越化学</div>
-                    <div class="text-[11px] text-slate-400">TSE:4063</div>
-                </div>
-
-                <!-- 19. リクルートHD -->
-                <div data-category="it" onclick="switchSymbol('TSE:6098', 'リクルートHD')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">6098</span>
-                        <span class="text-[10px] text-slate-500">サービス</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">リクルートHD</div>
-                    <div class="text-[11px] text-slate-400">TSE:6098</div>
-                </div>
-
-                <!-- 20. 武田薬品工業 -->
-                <div data-category="industry" onclick="switchSymbol('TSE:4502', '武田薬品')" class="stock-card cursor-pointer bg-slate-950/70 hover:bg-slate-800/80 p-3 rounded-xl border border-slate-800 hover:border-cyan-500/60 shadow-md">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">4502</span>
-                        <span class="text-[10px] text-slate-500">医薬品</span>
-                    </div>
-                    <div class="font-bold text-sm text-slate-100 truncate">武田薬品</div>
-                    <div class="text-[11px] text-slate-400">TSE:4502</div>
-                </div>
-
             </div>
         </section>
 
-        <!-- メイン画面：2カラム構成（左: チャート / 右: テクニカル分析 ＆ 日本語ニュース） -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- 2. 全上場企業価値ヒートマップ -->
+        <section id="heatmap-section" class="space-y-4">
+            <div>
+                <h2 class="text-2xl font-bold flex items-center gap-2 text-slate-100">
+                    <i data-lucide="layout-grid" class="text-emerald-500"></i>
+                    日本株 企業価値（時価総額）ヒートマップ
+                </h2>
+                <p class="text-sm text-slate-400 mt-1">
+                    ブロックの大きさが「企業価値（時価総額）」、色が「本日の値上がり率（緑）/ 値下がり率（赤）」を表します。
+                </p>
+            </div>
 
-            <!-- 左側: メイン分析チャート (8/12) -->
-            <section class="lg:col-span-8 bg-slate-900/80 rounded-2xl border border-slate-800/80 p-4 sm:p-6 shadow-2xl flex flex-col">
-                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-chart-line text-cyan-400"></i>
-                        <h2 class="text-base font-bold text-white">
-                            選択中: <span id="current-symbol-name" class="text-cyan-400">トヨタ自動車</span> 
-                            <span id="current-symbol-code" class="text-xs text-slate-400 font-normal ml-2">TSE:7203</span>
-                        </h2>
-                    </div>
-                    <span class="text-xs text-slate-400 hidden sm:inline-block">移動平均線・テクニカル表示対応</span>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl" style="height: 550px;">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
+                    {
+                        "exchanges": [],
+                        "dataSource": "TokyoSE",
+                        "grouping": "sector",
+                        "blockSize": "market_cap_basic",
+                        "blockColor": "change",
+                        "locale": "ja",
+                        "symbolUrl": "",
+                        "colorTheme": "dark",
+                        "hasTopBar": true,
+                        "isDatasetEnabled": true,
+                        "isTransparent": true,
+                        "width": "100%",
+                        "height": "100%"
+                    }
+                    </script>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 詳細チャート＆ニュース（2カラム構成） -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- メイン詳細チャート (左側 2/3) -->
+            <section id="chart-section" class="lg:col-span-2 space-y-4">
+                <div>
+                    <h2 class="text-2xl font-bold flex items-center gap-2 text-slate-100">
+                        <i data-lucide="line-chart" class="text-indigo-500"></i>
+                        個別銘柄・主要指数 高機能リアルタイムチャート
+                    </h2>
+                    <p class="text-sm text-slate-400 mt-1">
+                        左上の検索ボックスから任意の日本株銘柄コード（例：7203, 8035, 9984）を入力してチャートを表示できます。
+                    </p>
                 </div>
 
-                <!-- TradingView インタラクティブチャート -->
-                <div class="w-full h-[550px] rounded-xl overflow-hidden bg-slate-950/80 border border-slate-800/50 shadow-inner">
-                    <div id="tv-chart-container" class="w-full h-full"></div>
+                <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl" style="height: 600px;">
+                    <div class="tradingview-widget-container">
+                        <div id="tradingview_advanced_chart" style="height:100%; width:100%;"></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+                        <script type="text/javascript">
+                        new TradingView.widget({
+                            "autosize": true,
+                            "symbol": "TSE:7203",
+                            "interval": "D",
+                            "timezone": "Asia/Tokyo",
+                            "theme": "dark",
+                            "style": "1",
+                            "locale": "ja",
+                            "toolbar_bg": "#f1f3f6",
+                            "enable_publishing": false,
+                            "allow_symbol_change": true,
+                            "container_id": "tradingview_advanced_chart"
+                        });
+                        </script>
+                    </div>
                 </div>
             </section>
 
-            <!-- 右側: テクニカルメーター ＆ 日本語ニュース (4/12) -->
-            <section class="lg:col-span-4 space-y-6 flex flex-col">
-                
-                <!-- 1. テクニカル分析メーター -->
-                <div class="bg-slate-900/80 rounded-2xl border border-slate-800/80 p-4 sm:p-6 shadow-xl">
-                    <div class="flex items-center gap-2 mb-3 pb-2 border-b border-slate-800">
-                        <i class="fa-solid fa-gauge-high text-emerald-400"></i>
-                        <h3 class="text-sm font-bold text-white">テクニカル売買シグナル</h3>
-                    </div>
-                    <div class="w-full h-[360px] rounded-xl overflow-hidden bg-slate-950/60 border border-slate-800/50">
-                        <div id="tv-gauge-container" class="w-full h-full"></div>
-                    </div>
+            <!-- 4. 日本語株式マーケットニュースタイムライン (右側 1/3) -->
+            <section id="news-section" class="space-y-4">
+                <div>
+                    <h2 class="text-2xl font-bold flex items-center gap-2 text-slate-100">
+                        <i data-lucide="newspaper" class="text-amber-500"></i>
+                        市場ニュース（日本語速報）
+                    </h2>
+                    <p class="text-sm text-slate-400 mt-1">
+                        日本市場・世界経済の最新情報をリアルタイムで更新。
+                    </p>
                 </div>
 
-                <!-- 2. 日本語市場ニュースタイムライン -->
-                <div class="bg-slate-900/80 rounded-2xl border border-slate-800/80 p-4 sm:p-6 shadow-xl flex-grow flex flex-col">
-                    <div class="flex items-center gap-2 mb-3 pb-2 border-b border-slate-800">
-                        <i class="fa-solid fa-newspaper text-amber-400"></i>
-                        <h3 class="text-sm font-bold text-white">最新マーケットニュース (日本語)</h3>
-                    </div>
-                    <div class="w-full h-[400px] rounded-xl overflow-hidden bg-slate-950/60 border border-slate-800/50">
-                        <div class="tradingview-widget-container h-full">
-                            <div class="tradingview-widget-container__widget h-full"></div>
-                            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>
-                            {
-                                "feedMode": "market",
-                                "market": "stock",
-                                "colorTheme": "dark",
-                                "isTransparent": true,
-                                "displayMode": "regular",
-                                "width": "100%",
-                                "height": "100%",
-                                "locale": "ja"
-                            }
-                            </script>
-                        </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl" style="height: 600px;">
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>
+                        {
+                            "feedMode": "market",
+                            "market": "stock",
+                            "colorTheme": "dark",
+                            "isTransparent": true,
+                            "displayMode": "regular",
+                            "width": "100%",
+                            "height": "100%",
+                            "locale": "ja"
+                        }
+                        </script>
                     </div>
                 </div>
-
             </section>
 
         </div>
@@ -466,147 +260,16 @@
     </main>
 
     <!-- フッター -->
-    <footer class="bg-slate-950 border-t border-slate-800/80 mt-12 py-8 text-xs text-slate-400 px-4">
-        <div class="max-w-[1920px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
-            <div>
-                <p class="text-slate-300 font-bold mb-1">J-Stock Pulse / 日本株マーケットダッシュボード</p>
-                <p class="text-slate-500">リアルタイム株価データ提供: TradingView Inc.</p>
-            </div>
-            <div class="max-w-xl text-slate-500 text-[11px] leading-relaxed">
-                <p>※本Webサイトで提供されている株価情報、チャート、ニュースは情報提供を目的としており、特定の金融商品の推奨や投資勧誘を意図するものではありません。投資に関する最終決定は、お客様ご自身の判断でなさるようお願いいたします。</p>
-            </div>
+    <footer class="bg-slate-900 border-t border-slate-800 mt-12 py-6 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>※本サイトで提供される株価データ・ニュースはTradingView APIによってリアルタイム提供されています。</p>
+            <p class="mt-1">© J-Stock Hub Dashboard. All Rights Reserved.</p>
         </div>
     </footer>
 
-    <!-- スクリプト: 動的チャート切り替え ＆ 検索機能 -->
+    <!-- Lucide アイコンの初期化 -->
     <script>
-        // 現在のアクティブな銘柄
-        let currentSymbol = 'TSE:7203';
-        let currentName = 'トヨタ自動車';
-
-        // 銘柄切り替え関数
-        function switchSymbol(symbol, name) {
-            // 4桁数字の場合は自前で "TSE:" を付与
-            if (/^\d{4}$/.test(symbol)) {
-                symbol = 'TSE:' + symbol;
-            }
-
-            currentSymbol = symbol;
-            currentName = name || symbol;
-
-            // 表示ラベル更新
-            document.getElementById('current-symbol-name').textContent = currentName;
-            document.getElementById('current-symbol-code').textContent = currentSymbol;
-
-            // 1. メインチャートの再描画
-            const chartContainer = document.getElementById('tv-chart-container');
-            chartContainer.innerHTML = '';
-            new TradingView.widget({
-                "autosize": true,
-                "symbol": currentSymbol,
-                "interval": "D",
-                "timezone": "Asia/Tokyo",
-                "theme": "dark",
-                "style": "1",
-                "locale": "ja",
-                "toolbar_bg": "#0f172a",
-                "enable_publishing": false,
-                "allow_symbol_change": true,
-                "container_id": "tv-chart-container",
-                "hide_side_toolbar": false,
-                "studies": [
-                    "STD;MA%1Ribbon"
-                ]
-            });
-
-            // 2. テクニカル分析メーターの再描画
-            const gaugeContainer = document.getElementById('tv-gauge-container');
-            gaugeContainer.innerHTML = '';
-            const gaugeScript = document.createElement('script');
-            gaugeScript.type = 'text/javascript';
-            gaugeScript.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
-            gaugeScript.async = true;
-            gaugeScript.text = JSON.stringify({
-                "interval": "1D",
-                "width": "100%",
-                "isTransparent": true,
-                "height": "100%",
-                "symbol": currentSymbol,
-                "showIntervalTabs": true,
-                "displayMode": "single",
-                "locale": "ja",
-                "colorTheme": "dark"
-            });
-            gaugeContainer.appendChild(gaugeScript);
-        }
-
-        // 検索機能の実行ハンドラー
-        function handleSearch(event) {
-            event.preventDefault();
-            const query = document.getElementById('symbol-search-input').value.trim();
-            if (!query) return;
-
-            let targetSymbol = query.toUpperCase();
-            let targetName = targetSymbol;
-
-            // 4桁のコード（例: 8035）なら東証コードとして扱う
-            if (/^\d{4}$/.test(targetSymbol)) {
-                targetSymbol = 'TSE:' + targetSymbol;
-                targetName = `銘柄 (${query})`;
-            }
-
-            switchSymbol(targetSymbol, targetName);
-            document.getElementById('symbol-search-input').value = '';
-        }
-
-        // カテゴリフィルター関数
-        function filterStocks(category) {
-            const cards = document.querySelectorAll('#stocks-grid > div');
-            const btns = document.querySelectorAll('.cat-btn');
-
-            // ボタンのアクティブ状態更新
-            btns.forEach(btn => {
-                btn.classList.remove('active', 'bg-cyan-600', 'text-white', 'border-cyan-500');
-                btn.classList.add('bg-slate-800', 'text-slate-300', 'border-slate-700');
-            });
-            event.target.classList.remove('bg-slate-800', 'text-slate-300', 'border-slate-700');
-            event.target.classList.add('active', 'bg-cyan-600', 'text-white', 'border-cyan-500');
-
-            // カードの絞り込み表示
-            cards.forEach(card => {
-                if (category === 'all' || card.getAttribute('data-category') === category) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        }
-
-        // リアルタイム時計の更新
-        function updateClock() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const date = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            
-            const clockEl = document.getElementById('live-clock');
-            if (clockEl) {
-                clockEl.textContent = `${year}/${month}/${date} ${hours}:${minutes}:${seconds} (JST)`;
-            }
-        }
-
-        // 初期表示設定
-        window.onload = function() {
-            // 初期状態はトヨタ自動車を表示
-            switchSymbol('TSE:7203', 'トヨタ自動車');
-            
-            // 時計の開始
-            updateClock();
-            setInterval(updateClock, 1000);
-        };
+        lucide.createIcons();
     </script>
 </body>
 </html>
